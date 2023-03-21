@@ -9,6 +9,15 @@
 <script> 
     $(document).ready(function() {  
 
+        $('#potterForm').submit(function(e){
+            e.preventDefault(); //stop default action of the link
+            let spell = 'patronus';
+            loadAJAX(spell);  //load AJAX and parse JSON file
+        });
+
+
+
+
 	$('.spell').click(function(e){
             e.preventDefault(); //stop default action of the link
             let spell = $(this).attr("href");  //get category from URL
@@ -22,7 +31,7 @@
             type: "GET",
             dataType: "json",  
             url: "api.php?spell=" + spell,
-            success: toConsole,
+            success: potterJSON,
             cache:false
         }).fail(function (jqXHR, textStatus, error) {
         // Handle error here
@@ -38,11 +47,164 @@
     }
  
     function potterJSON(data){
+        $('#sort').html('');//clear sort data
+      //get selected houses for title display
+        var house_checkboxes = $('input[name=character_house]:checked');
+        var houses = [];
+        $(house_checkboxes).each(function(){
+            houses.push(this.value); //add to an array of selected houses
+        });
         
+        //add array of houses to title
+        if(houses != "")
+        {
+            houses = "Houses: " + houses.join(', ');  //join builds comma separated string from array
+            $('<h4></h4>').html(houses).appendTo('#sort');
+        }else{
+            $('<h4></h4>').html('No houses selected').appendTo('#sort');
+        }
+
+      
+      let result = _.filter(data.characters, getHousesByCharacter);//underscore filters by house
+        _.each(result, loadPotterTemplate);  //show each of the items
+
+       /* 
+      $.each(data.characters,function(i,item){
+            let str = '';
+            str += potterTemplate(item);
+            $('#potterTable').append(str);
+        });
+
+            
         let myData = JSON.stringify(data,null,4);
         myData = '<pre>' + myData + '</pre>';
         $('#output').html(myData);
+        */
     }
+
+    function potterTemplate(obj){
+      
+        let houseTitle = '';
+        let alignmentTitle = '';
+        let genderTitle = '';
+        let roleTitle = '';
+        let alignmentPic = '';
+        let rolePic = obj.role;
+	   
+        //adapted sorting hat songs to titles of houses
+        switch(obj.house)
+        {
+            case 'Gryffindor':
+                houseTitle = 'Where dwell the brave at heart, daring, nerve, and chivalry set Gryffindors apart';
+            break;
+                
+            case 'Slytherin':
+                houseTitle = 'In Slytherin You\'ll make your real friends, cunning folk who use any means to achieve their ends';
+            break;
+
+            case 'Ravenclaw':
+                houseTitle = 'In Ravenclaw, if you\'ve a ready mind, those of wit and learning will always find their kind';
+            break;    
+
+            case 'Hufflepuff':
+                houseTitle = 'If are just and loyal, those patient Hufflepuffs are true and unafraid of toil'; 
+            break; 
+                
+            default:
+                houseTitle = 'There\'s nothing hidden in your head the Sorting Hat can\'t see, so try me on and I will tell you Where you ought to be';
+        }
+        
+        if(obj.alignment == 'good')
+        {//adds specific mouse over/title based on role
+            alignmentTitle = 'Goody two shoes!';
+            alignmentPic = 'good';
+        }else if(obj.alignment == 'evil'){
+            alignmentTitle = 'Bad to the bone!';
+            alignmentPic = 'evil';
+            
+        }else{
+            alignmentTitle = 'Be careful!  We don\'t know what we\'ve got here!';
+            alignmentPic = 'crossed';
+        }
+        
+         if(obj.gender == 'm')
+        {//adds specific mouse over/title based on role
+            genderTitle = 'Snakes and snails and puppydog tails!';
+        }else if(obj.gender == 'f'){
+            genderTitle = 'Sugar and spice and everything nice!';   
+        }else{
+            genderTitle = 'Be careful!  We don\'t know what we\'ve got here!';
+        }
+
+
+
+      if(obj.role == 'student')
+      {//adds specific mouse over/title based on role
+          roleTitle = 'Interested in students?  Let\'s keep things proper here!';
+      }else if(obj.role == 'staff'){
+          roleTitle = 'Like the rod? Our staff will never spare you!';   
+      }else{
+          roleTitle = 'Be careful!  We don\'t know what we\'ve got here!';
+          rolePic = 'crossed';
+      }
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      return `
+        <tr>
+          <td>
+              <p>${obj.name}</p>
+              <p><img height="100px" src="lego-harry-potter/${obj.name.toLowerCase().replace(' ','-')}-lego.jpg"></p>
+          </td>
+          <td title="${roleTitle}" class="category">
+              <p class="potterPlus">${obj.role}</p>
+              <p><img height="50px" src="lego-harry-potter/${rolePic}.png"></p>
+          </td>
+          <td class="category" title="${houseTitle}">
+              <p>${obj.house}</p>
+              <p><img height="100px" src="lego-harry-potter/${obj.house.toLowerCase()}-patch.jpg"></p>
+          </td>
+          <td class="category" title="${genderTitle}">
+              <p class="potterPlus">${obj.gender}</p>
+              <p><img height="40px" src="lego-harry-potter/${obj.gender}.png"></p>
+          </td>
+          <td class="category" title="${alignmentTitle}">
+              <p class="potterPlus">${obj.alignment}</p>
+              <p><img height="40px" src="lego-harry-potter/${alignmentPic}.png"></p>
+          </td>
+      </tr>
+      `;
+    }
+
+   function loadPotterTemplate(item, indx, list) 
+    {//get data for one film
+        let str = '';
+        str += potterTemplate(item);
+        $('#potterTable').append(str); 
+    }
+
+    function getHousesByCharacter(item)
+    {//filter to selected houses
+
+        //acquire checkbox data direct from form
+        var house_checkboxes = $('input[name=character_house]:checked');
+
+        for(x=0;x<house_checkboxes.length;x++)
+        {//
+            if(house_checkboxes[x].value===item.house){return true;}
+        }
+        return false; //default if nothing inside found to match
+    }
+
+
+  
     </script>   
 
     <style type="text/css">
@@ -177,6 +339,17 @@
     <p>Are you in search of an evil female staff member from house Slytherin?</p>
     <p>Choose categories below to find your match in the <span class="potterFont">Hogwart's Friend Finder</span> below!</p>
         <p><a href="patronus" class="spell">Patronus!</a></p>
+      <h3 id="sort">Sort</h3>
+        <form id="potterForm">
+		<p>Please identify houses on which to filter:</p>
+            <input type="checkbox" name="character_house" value="Gryffindor">Gryffindor<br />
+            <input type="checkbox" name="character_house" value="Hufflepuff">Hufflepuff <br />
+            <input type="checkbox" name="character_house" value="Ravenclaw">Ravenclaw <br />
+            <input type="checkbox" name="character_house" value="Slytherin">Slytherin <br />
+        </p>
+        <p><input type="submit" value="Patronus!" /></p>
+        </form>
+
         <table id="potterTable" border='1'>
             <tr>
                 <th>name</th>
@@ -184,7 +357,6 @@
                 <th>house</th>
                 <th>gender</th>
                 <th>alignment</th>
-            </tr>
         </table>
         
         <div id="output"></div>
